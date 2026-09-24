@@ -1,118 +1,155 @@
 <?php
 /**
- * Customer Login Page
+ * Admin Login Page
  */
 
-require_once 'includes/functions.php';
+require_once '../includes/functions.php';
 
 // Redirect if already logged in
-if (is_logged_in()) {
-    redirect(SITE_URL . '/user/index.php');
+if (is_admin_logged_in()) {
+    redirect(SITE_URL . '/admin/index.php');
 }
 
 $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = sanitize_input($_POST['email'] ?? '');
+    $username = sanitize_input($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
-    $remember = isset($_POST['remember']);
 
     // Validation
-    if (empty($email)) {
-        $errors[] = 'Email is required';
+    if (empty($username)) {
+        $errors[] = 'Username is required';
     }
     if (empty($password)) {
         $errors[] = 'Password is required';
     }
 
-    // Authenticate user if no errors
+    // Authenticate admin if no errors
     if (empty($errors)) {
-        $sql = "SELECT user_id, first_name, last_name, email, password, eco_points 
-                FROM users 
-                WHERE email = ?";
-        $result = prepared_select($sql, "s", [$email]);
+        $sql = "SELECT admin_id, username, password, full_name FROM admin WHERE username = ?";
+        $result = prepared_select($sql, "s", [$username]);
         
         if ($result->num_rows === 1) {
-            $user = $result->fetch_assoc();
+            $admin = $result->fetch_assoc();
             
-            if (verify_password($password, $user['password'])) {
+            if (verify_password($password, $admin['password'])) {
                 // Set session variables
-                $_SESSION['user_id'] = $user['user_id'];
-                $_SESSION['first_name'] = $user['first_name'];
-                $_SESSION['last_name'] = $user['last_name'];
-                $_SESSION['email'] = $user['email'];
-                $_SESSION['eco_points'] = $user['eco_points'];
+                $_SESSION['admin_id'] = $admin['admin_id'];
+                $_SESSION['admin_username'] = $admin['username'];
+                $_SESSION['admin_full_name'] = $admin['full_name'];
 
                 // Update last login
-                $update_sql = "UPDATE users SET last_login = NOW() WHERE user_id = ?";
-                prepared_execute($update_sql, "i", [$user['user_id']]);
+                $update_sql = "UPDATE admin SET last_login = NOW() WHERE admin_id = ?";
+                prepared_execute($update_sql, "i", [$admin['admin_id']]);
 
-                set_flash_message('success', 'Welcome back, ' . htmlspecialchars($user['first_name']) . '!');
-                
-                // Redirect to dashboard or previous page
-                $redirect = isset($_SESSION['redirect_after_login']) ? $_SESSION['redirect_after_login'] : SITE_URL . '/user/index.php';
-                unset($_SESSION['redirect_after_login']);
-                redirect($redirect);
+                set_flash_message('success', 'Welcome back, ' . htmlspecialchars($admin['full_name']) . '!');
+                redirect(SITE_URL . '/admin/index.php');
             } else {
-                $errors[] = 'Invalid email or password';
+                $errors[] = 'Invalid username or password';
             }
         } else {
-            $errors[] = 'Invalid email or password';
+            $errors[] = 'Invalid username or password';
         }
     }
 }
-
-$page_title = 'Login';
-require_once 'includes/header.php';
 ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - GreenBasket</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .login-header {
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-5">
+                <div class="login-card">
+                    <div class="login-header">
+                        <i class="bi bi-basket-fill" style="font-size: 60px;"></i>
+                        <h2 class="mt-3">GreenBasket</h2>
+                        <p class="mb-0">Admin Panel</p>
+                    </div>
+                    <div class="card-body p-5">
+                        <?php if (!empty($errors)): ?>
+                            <div class="alert alert-danger">
+                                <ul class="mb-0">
+                                    <?php foreach ($errors as $error): ?>
+                                        <li><?php echo htmlspecialchars($error); ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
+                        <?php endif; ?>
 
-<div class="container my-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card shadow">
-                <div class="card-header bg-success text-white">
-                    <h4 class="mb-0"><i class="bi bi-box-arrow-in-right"></i> Login</h4>
-                </div>
-                <div class="card-body">
-                    <?php if (!empty($errors)): ?>
-                        <div class="alert alert-danger">
-                            <ul class="mb-0">
-                                <?php foreach ($errors as $error): ?>
-                                    <li><?php echo htmlspecialchars($error); ?></li>
-                                <?php endforeach; ?>
-                            </ul>
+                        <?php
+                        $flash = get_flash_message();
+                        if ($flash):
+                        ?>
+                            <div class="alert alert-<?php echo $flash['type']; ?> alert-dismissible fade show" role="alert">
+                                <?php echo htmlspecialchars($flash['message']); ?>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        <?php endif; ?>
+
+                        <form method="POST" action="">
+                            <div class="mb-4">
+                                <label class="form-label">Username</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                    <input type="text" class="form-control" name="username" 
+                                           value="<?php echo htmlspecialchars($username ?? ''); ?>" required>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label">Password</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                    <input type="password" class="form-control" name="password" required>
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-success btn-lg">Login</button>
+                            </div>
+                        </form>
+
+                        <div class="text-center mt-4">
+                            <a href="<?php echo SITE_URL; ?>/index.php" class="text-decoration-none">
+                                <i class="bi bi-arrow-left"></i> Back to Website
+                            </a>
                         </div>
-                    <?php endif; ?>
-
-                    <form method="POST" action="">
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email Address *</label>
-                            <input type="email" class="form-control" id="email" name="email" 
-                                   value="<?php echo htmlspecialchars($email ?? ''); ?>" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Password *</label>
-                            <input type="password" class="form-control" id="password" name="password" required>
-                        </div>
-
-                        <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="remember" name="remember">
-                            <label class="form-check-label" for="remember">Remember me</label>
-                        </div>
-
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-success btn-lg">Login</button>
-                        </div>
-                    </form>
-
-                    <div class="text-center mt-3">
-                        <p class="mb-0">Don't have an account? <a href="<?php echo SITE_URL; ?>/register.php">Register here</a></p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<?php require_once 'includes/footer.php'; ?>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

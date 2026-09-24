@@ -1,400 +1,420 @@
 <?php
 /**
- * GreenBasket Homepage
- * Main landing page with all sections
+ * Admin Dashboard
  */
 
-require_once 'includes/functions.php';
+require_once '../includes/functions.php';
+require_once '../includes/admin_auth.php';
 
-$page_title = 'Home';
-require_once 'includes/header.php';
-
-// Get featured products
-$featured_products = get_featured_products(8);
-
-// Get all categories
-$categories = get_all_categories();
+$page_title = 'Admin Dashboard';
 ?>
 
-<!-- Hero Section -->
-<section class="hero-section">
-    <div class="container hero-content">
-        <div class="row align-items-center">
-            <div class="col-lg-7">
-                <h1 class="hero-title">Shop Sustainably, Live Responsibly</h1>
-                <p class="hero-subtitle">Discover eco-friendly products that help you reduce your carbon footprint without compromising on quality or style.</p>
-                <a href="<?php echo SITE_URL; ?>/shop.php" class="btn btn-light btn-lg hero-btn">Shop Now <i class="bi bi-arrow-right"></i></a>
-            </div>
-            <div class="col-lg-5 d-none d-lg-block">
-                <div class="text-center">
-                    <i class="bi bi-basket2" style="font-size: 200px; opacity: 0.3;"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Featured Products Section -->
-<section class="py-5">
-    <div class="container">
-        <h2 class="section-title">Featured Products</h2>
-        <p class="section-subtitle">Hand-picked eco-friendly products for sustainable living</p>
-        
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo $page_title; ?> - GreenBasket Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="<?php echo ASSETS_PATH; ?>/css/style.css">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background: #1a1a1a;
+            color: white;
+        }
+        .sidebar .nav-link {
+            color: #cccccc !important;
+            padding: 15px 20px;
+            border-left: 4px solid transparent;
+        }
+        .sidebar .nav-link i {
+            color: #cccccc !important;
+        }
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background: #28a745 !important;
+            color: #ffffff !important;
+            border-left: 4px solid #ffffff;
+            font-weight: 600;
+        }
+        .sidebar .nav-link:hover i,
+        .sidebar .nav-link.active i {
+            color: #ffffff !important;
+        }
+        .stat-card {
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .stat-card .icon {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
         <div class="row">
-            <?php foreach ($featured_products as $product): ?>
+            <!-- Sidebar -->
+            <div class="col-md-2 sidebar p-0">
+                <div class="p-3 text-center border-bottom border-secondary">
+                    <i class="bi bi-basket-fill" style="font-size: 30px; color: #28a745;"></i>
+                    <h5 class="mt-2">GreenBasket</h5>
+                    <small>Admin Panel</small>
+                </div>
+                <nav class="nav flex-column mt-3">
+                    <a class="nav-link active" href="index.php">
+                        <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                    </a>
+                    <a class="nav-link" href="products.php">
+                        <i class="bi bi-box-seam me-2"></i> Products
+                    </a>
+                    <a class="nav-link" href="categories.php">
+                        <i class="bi bi-tags me-2"></i> Categories
+                    </a>
+                    <a class="nav-link" href="orders.php">
+                        <i class="bi bi-bag me-2"></i> Orders
+                    </a>
+                    <a class="nav-link" href="customers.php">
+                        <i class="bi bi-people me-2"></i> Customers
+                    </a>
+                    <a class="nav-link" href="reviews.php">
+                        <i class="bi bi-star me-2"></i> Reviews
+                    </a>
+                    <a class="nav-link" href="coupons.php">
+                        <i class="bi bi-ticket-perforated me-2"></i> Coupons
+                    </a>
+                    <a class="nav-link" href="reports.php">
+                        <i class="bi bi-graph-up me-2"></i> Reports
+                    </a>
+                    <hr class="border-secondary">
+                    <a class="nav-link" href="../index.php" target="_blank">
+                        <i class="bi bi-eye me-2"></i> View Site
+                    </a>
+                    <a class="nav-link text-danger" href="../logout.php">
+                        <i class="bi bi-box-arrow-right me-2"></i> Logout
+                    </a>
+                </nav>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="col-md-10 p-4">
                 <?php
-                $rating = get_average_rating($product['product_id']);
-                $discount = 0;
-                if ($product['original_price'] && $product['original_price'] > $product['price']) {
-                    $discount = round((($product['original_price'] - $product['price']) / $product['original_price']) * 100);
+                $flash = get_flash_message();
+                if ($flash):
+                ?>
+                    <div class="alert alert-<?php echo $flash['type']; ?> alert-dismissible fade show" role="alert">
+                        <?php echo htmlspecialchars($flash['message']); ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
+                
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Dashboard</h2>
+                    <div>
+                        <span class="text-muted">Welcome, <?php echo htmlspecialchars($_SESSION['admin_full_name']); ?></span>
+                    </div>
+                </div>
+                
+                <?php
+                // Get dashboard statistics
+                $stats_sql = "SELECT 
+                            (SELECT COUNT(*) FROM users) as total_users,
+                            (SELECT COUNT(*) FROM products) as total_products,
+                            (SELECT COUNT(*) FROM orders) as total_orders,
+                            (SELECT COUNT(*) FROM orders WHERE order_status = 'pending') as pending_orders,
+                            (SELECT COUNT(*) FROM orders WHERE order_status = 'delivered') as delivered_orders,
+                            (SELECT SUM(final_amount) FROM orders WHERE order_status = 'delivered') as total_revenue,
+                            (SELECT COUNT(*) FROM products WHERE stock_quantity < 10) as low_stock";
+                $stats_result = prepared_select($stats_sql);
+                $stats = $stats_result->fetch_assoc();
+                
+                // Get monthly sales
+                $monthly_sales_sql = "SELECT DATE_FORMAT(created_at, '%Y-%m') as month, SUM(final_amount) as sales 
+                                      FROM orders 
+                                      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+                                      GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+                                      ORDER BY month ASC";
+                $monthly_sales_result = prepared_select($monthly_sales_sql);
+                $monthly_sales = [];
+                while ($row = $monthly_sales_result->fetch_assoc()) {
+                    $monthly_sales[] = $row;
+                }
+                
+                // Get recent orders
+                $recent_orders_sql = "SELECT * FROM orders ORDER BY created_at DESC LIMIT 5";
+                $recent_orders_result = prepared_select($recent_orders_sql);
+                $recent_orders = [];
+                while ($row = $recent_orders_result->fetch_assoc()) {
+                    $recent_orders[] = $row;
+                }
+                
+                // Get low stock products
+                $low_stock_sql = "SELECT * FROM products WHERE stock_quantity < 10 ORDER BY stock_quantity ASC LIMIT 5";
+                $low_stock_result = prepared_select($low_stock_sql);
+                $low_stock = [];
+                while ($row = $low_stock_result->fetch_assoc()) {
+                    $low_stock[] = $row;
                 }
                 ?>
-                <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
-                    <div class="product-card">
-                        <div class="product-image">
-                            <?php if ($product['image']): ?>
-                                <img src="<?php echo UPLOADS_URL . '/products/' . htmlspecialchars($product['image']); ?>" 
-                                     alt="<?php echo htmlspecialchars($product['product_name']); ?>">
-                            <?php else: ?>
-                                <i class="bi bi-box-seam" style="font-size: 80px; color: #ccc;"></i>
-                            <?php endif; ?>
-                            
-                            <?php if (is_logged_in()): ?>
-                                <button class="product-wishlist" onclick="toggleWishlist(<?php echo $product['product_id']; ?>)">
-                                    <i class="bi bi-heart"></i>
-                                </button>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <div class="product-info">
-                            <p class="product-category"><?php echo htmlspecialchars($product['category_name']); ?></p>
-                            <h5 class="product-name">
-                                <a href="<?php echo SITE_URL; ?>/product.php?id=<?php echo $product['product_id']; ?>">
-                                    <?php echo htmlspecialchars($product['product_name']); ?>
-                                </a>
-                            </h5>
-                            
-                            <div class="product-price">
-                                <span class="current-price"><?php echo format_price($product['price']); ?></span>
+                
+                <!-- Stats Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3 mb-3">
+                        <div class="card stat-card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon bg-primary text-white rounded-circle me-3">
+                                        <i class="bi bi-people"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Total Users</h6>
+                                        <h3 class="mb-0"><?php echo $stats['total_users'] ?? 0; ?></h3>
+                                    </div>
+                                </div>
                             </div>
-                            
-                            <div class="product-rating">
-                                <?php for ($i = 1; $i <= 5; $i++): ?>
-                                    <i class="bi bi-star<?php echo $i <= $rating['rating'] ? '-fill' : ''; ?>"></i>
-                                <?php endfor; ?>
-                                <span>(<?php echo $rating['count']; ?>)</span>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3 mb-3">
+                        <div class="card stat-card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon bg-success text-white rounded-circle me-3">
+                                        <i class="bi bi-box-seam"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Total Products</h6>
+                                        <h3 class="mb-0"><?php echo $stats['total_products'] ?? 0; ?></h3>
+                                    </div>
+                                </div>
                             </div>
-                            
-                            <button class="add-to-cart-btn" onclick="addToCart(<?php echo $product['product_id']; ?>)">
-                                <i class="bi bi-cart-plus"></i> Add to Cart
-                            </button>
                         </div>
                     </div>
-                </div>
-            <?php endforeach; ?>
-        </div>
-        
-        <div class="text-center mt-4">
-            <a href="<?php echo SITE_URL; ?>/shop.php" class="btn btn-outline-success btn-lg">View All Products</a>
-        </div>
-    </div>
-</section>
-
-<!-- Categories Section -->
-<section class="py-5 bg-light">
-    <div class="container">
-        <h2 class="section-title">Shop by Category</h2>
-        <p class="section-subtitle">Browse our wide range of eco-friendly categories</p>
-        
-        <div class="row">
-            <?php foreach ($categories as $category): ?>
-                <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
-                    <div class="category-card" onclick="window.location.href='<?php echo SITE_URL; ?>/shop.php?category=<?php echo $category['category_id']; ?>'">
-                        <div class="category-image">
-                            <i class="bi bi-<?php echo get_category_icon($category['category_name']); ?>"></i>
-                        </div>
-                        <div class="category-info">
-                            <h5 class="category-name"><?php echo htmlspecialchars($category['category_name']); ?></h5>
-                            <p class="category-count">View Products</p>
-                        </div>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</section>
-
-<!-- Why Choose Us Section -->
-<section class="py-5">
-    <div class="container">
-        <h2 class="section-title">Why Choose GreenBasket?</h2>
-        <p class="section-subtitle">Making sustainable shopping easy and affordable</p>
-        
-        <div class="row">
-            <div class="col-lg-3 col-md-6 mb-4">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="bi bi-leaf"></i>
-                    </div>
-                    <h4 class="feature-title">100% Eco-Friendly</h4>
-                    <p class="feature-description">All our products are carefully selected to ensure they are truly sustainable and environmentally friendly.</p>
-                </div>
-            </div>
-            
-            <div class="col-lg-3 col-md-6 mb-4">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="bi bi-truck"></i>
-                    </div>
-                    <h4 class="feature-title">Free Shipping</h4>
-                    <p class="feature-description">Enjoy free shipping on all orders above Rs999. We use eco-friendly packaging materials.</p>
-                </div>
-            </div>
-            
-            <div class="col-lg-3 col-md-6 mb-4">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="bi bi-shield-check"></i>
-                    </div>
-                    <h4 class="feature-title">Quality Assured</h4>
-                    <p class="feature-description">Every product is quality checked to ensure you receive only the best eco-friendly items.</p>
-                </div>
-            </div>
-            
-            <div class="col-lg-3 col-md-6 mb-4">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="bi bi-currency-rupee"></i>
-                    </div>
-                    <h4 class="feature-title">Affordable Prices</h4>
-                    <p class="feature-description">Sustainable living shouldn't break the bank. We offer competitive prices on all products.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Eco Tips Section -->
-<section class="eco-tips-section">
-    <div class="container">
-        <h2 class="section-title">Daily Eco Tips</h2>
-        <p class="section-subtitle">Simple tips to live a more sustainable life</p>
-        
-        <div class="row">
-            <div class="col-lg-4 col-md-6 mb-4">
-                <div class="tip-card">
-                    <div class="tip-icon">
-                        <i class="bi bi-droplet"></i>
-                    </div>
-                    <h5 class="tip-title">Save Water</h5>
-                    <p class="tip-text">Turn off the tap while brushing teeth. This simple act can save up to 8 gallons of water per day.</p>
-                </div>
-            </div>
-            
-            <div class="col-lg-4 col-md-6 mb-4">
-                <div class="tip-card">
-                    <div class="tip-icon">
-                        <i class="bi bi-lightbulb"></i>
-                    </div>
-                    <h5 class="tip-title">Energy Efficient</h5>
-                    <p class="tip-text">Switch to LED bulbs. They use 75% less energy and last 25 times longer than incandescent bulbs.</p>
-                </div>
-            </div>
-            
-            <div class="col-lg-4 col-md-6 mb-4">
-                <div class="tip-card">
-                    <div class="tip-icon">
-                        <i class="bi bi-bag"></i>
-                    </div>
-                    <h5 class="tip-title">Reduce Plastic</h5>
-                    <p class="tip-text">Carry a reusable bag when shopping. One reusable bag can replace over 700 plastic bags annually.</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="text-center mt-4">
-            <a href="<?php echo SITE_URL; ?>/eco-tips.php" class="btn btn-success btn-lg">More Eco Tips</a>
-        </div>
-    </div>
-</section>
-
-<!-- Best Sellers Section -->
-<section class="py-5">
-    <div class="container">
-        <h2 class="section-title">Best Sellers</h2>
-        <p class="section-subtitle">Our most popular eco-friendly products</p>
-        
-        <div class="row">
-            <?php 
-            $best_sellers = array_slice($featured_products, 0, 4);
-            foreach ($best_sellers as $product): 
-                $rating = get_average_rating($product['product_id']);
-            ?>
-                <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
-                    <div class="product-card">
-                        <div class="product-image">
-                            <?php if ($product['image']): ?>
-                                <img src="<?php echo UPLOADS_URL . '/products/' . htmlspecialchars($product['image']); ?>" 
-                                     alt="<?php echo htmlspecialchars($product['product_name']); ?>">
-                            <?php else: ?>
-                                <i class="bi bi-box-seam" style="font-size: 80px; color: #ccc;"></i>
-                            <?php endif; ?>
-                            
-                            <span class="product-badge">Best Seller</span>
-                            
-                            <?php if (is_logged_in()): ?>
-                                <button class="product-wishlist" onclick="toggleWishlist(<?php echo $product['product_id']; ?>)">
-                                    <i class="bi bi-heart"></i>
-                                </button>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <div class="product-info">
-                            <p class="product-category"><?php echo htmlspecialchars($product['category_name']); ?></p>
-                            <h5 class="product-name">
-                                <a href="<?php echo SITE_URL; ?>/product.php?id=<?php echo $product['product_id']; ?>">
-                                    <?php echo htmlspecialchars($product['product_name']); ?>
-                                </a>
-                            </h5>
-                            
-                            <div class="product-price">
-                                <span class="current-price"><?php echo format_price($product['price']); ?></span>
+                    
+                    <div class="col-md-3 mb-3">
+                        <div class="card stat-card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon bg-info text-white rounded-circle me-3">
+                                        <i class="bi bi-bag"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Total Orders</h6>
+                                        <h3 class="mb-0"><?php echo $stats['total_orders'] ?? 0; ?></h3>
+                                    </div>
+                                </div>
                             </div>
-                            
-                            <div class="product-rating">
-                                <?php for ($i = 1; $i <= 5; $i++): ?>
-                                    <i class="bi bi-star<?php echo $i <= $rating['rating'] ? '-fill' : ''; ?>"></i>
-                                <?php endfor; ?>
-                                <span>(<?php echo $rating['count']; ?>)</span>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3 mb-3">
+                        <div class="card stat-card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon bg-warning text-white rounded-circle me-3">
+                                        <i class="bi bi-currency-rupee"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Revenue</h6>
+                                        <h3 class="mb-0"><?php echo format_price($stats['total_revenue'] ?? 0); ?></h3>
+                                    </div>
+                                </div>
                             </div>
-                            
-                            <button class="add-to-cart-btn" onclick="addToCart(<?php echo $product['product_id']; ?>)">
-                                <i class="bi bi-cart-plus"></i> Add to Cart
-                            </button>
                         </div>
                     </div>
                 </div>
-            <?php endforeach; ?>
+                
+                <!-- Secondary Stats -->
+                <div class="row mb-4">
+                    <div class="col-md-4 mb-3">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-warning text-white rounded p-3 me-3">
+                                        <i class="bi bi-clock"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Pending Orders</h6>
+                                        <h4 class="mb-0"><?php echo $stats['pending_orders'] ?? 0; ?></h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-success text-white rounded p-3 me-3">
+                                        <i class="bi bi-check-circle"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Delivered Orders</h6>
+                                        <h4 class="mb-0"><?php echo $stats['delivered_orders'] ?? 0; ?></h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-danger text-white rounded p-3 me-3">
+                                        <i class="bi bi-exclamation-triangle"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Low Stock Products</h6>
+                                        <h4 class="mb-0"><?php echo $stats['low_stock'] ?? 0; ?></h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <!-- Recent Orders -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="mb-0">Recent Orders</h5>
+                                    <a href="orders.php" class="btn btn-sm btn-outline-success">View All</a>
+                                </div>
+                                
+                                <?php if (empty($recent_orders)): ?>
+                                    <p class="text-muted">No orders yet</p>
+                                <?php else: ?>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Order #</th>
+                                                    <th>Amount</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($recent_orders as $order): ?>
+                                                    <?php
+                                                    $status_colors = [
+                                                        'pending' => 'warning',
+                                                        'processing' => 'info',
+                                                        'shipped' => 'primary',
+                                                        'delivered' => 'success',
+                                                        'cancelled' => 'danger'
+                                                    ];
+                                                    $status_color = $status_colors[$order['order_status']] ?? 'secondary';
+                                                    ?>
+                                                    <tr>
+                                                        <td><?php echo htmlspecialchars($order['order_number']); ?></td>
+                                                        <td><?php echo format_price($order['final_amount']); ?></td>
+                                                        <td>
+                                                            <span class="badge bg-<?php echo $status_color; ?>">
+                                                                <?php echo ucfirst($order['order_status']); ?>
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Low Stock Alerts -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="mb-0">Low Stock Alerts</h5>
+                                    <a href="products.php" class="btn btn-sm btn-outline-success">View All</a>
+                                </div>
+                                
+                                <?php if (empty($low_stock)): ?>
+                                    <p class="text-muted">All products are well stocked</p>
+                                <?php else: ?>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Product</th>
+                                                    <th>Stock</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($low_stock as $product): ?>
+                                                    <tr>
+                                                        <td><?php echo htmlspecialchars($product['product_name']); ?></td>
+                                                        <td>
+                                                            <span class="badge bg-danger"><?php echo $product['stock_quantity']; ?></span>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Monthly Sales Chart -->
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="mb-4">Monthly Sales (Last 6 Months)</h5>
+                        <canvas id="salesChart" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-</section>
 
-<?php
-/**
- * Helper function to get category icon
- */
-function get_category_icon($category_name) {
-    $icons = [
-        'Eco Kitchen' => 'cup-hot',
-        'Organic Products' => 'egg-fried',
-        'Personal Care' => 'heart-pulse',
-        'Gardening' => 'flower1',
-        'Home Essentials' => 'house',
-        'Eco Stationery' => 'pencil',
-        'Reusable Products' => 'arrow-repeat'
-    ];
-    return $icons[$category_name] ?? 'tag';
-}
-?>
-
-<!-- Footer (homepage only) -->
-<footer class="bg-dark text-white mt-5">
-    <div class="container py-5">
-        <div class="row">
-            <div class="col-md-4 mb-4">
-                <h4 class="text-success mb-3"><i class="bi bi-basket-fill"></i> GreenBasket</h4>
-                <p>Your one-stop shop for eco-friendly and sustainable products. Join us in making the world a greener place, one purchase at a time.</p>
-            </div>
-            <div class="col-md-2 mb-4">
-                <h5 class="mb-3">Quick Links</h5>
-                <ul class="list-unstyled">
-                    <li><a href="<?php echo SITE_URL; ?>/index.php" class="text-white text-decoration-none">Home</a></li>
-                    <li><a href="<?php echo SITE_URL; ?>/shop.php" class="text-white text-decoration-none">Shop</a></li>
-                    <li><a href="<?php echo SITE_URL; ?>/about.php" class="text-white text-decoration-none">About Us</a></li>
-                    <li><a href="<?php echo SITE_URL; ?>/contact.php" class="text-white text-decoration-none">Contact</a></li>
-                </ul>
-            </div>
-            <div class="col-md-2 mb-4">
-                <h5 class="mb-3">Customer Service</h5>
-                <ul class="list-unstyled">
-                    <li><a href="#" class="text-white text-decoration-none">FAQ</a></li>
-                    <li><a href="#" class="text-white text-decoration-none">Shipping Info</a></li>
-                    <li><a href="#" class="text-white text-decoration-none">Returns</a></li>
-                    <li><a href="#" class="text-white text-decoration-none">Privacy Policy</a></li>
-                </ul>
-            </div>
-            <div class="col-md-4 mb-4">
-                <h5 class="mb-3">Newsletter</h5>
-                <p>Subscribe to get eco tips and exclusive offers!</p>
-                <form class="d-flex">
-                    <input type="email" class="form-control me-2" placeholder="Your email">
-                    <button type="submit" class="btn btn-success">Subscribe</button>
-                </form>
-            </div>
-        </div>
-        <hr class="my-4">
-        <div class="row">
-            <div class="col-md-6">
-                <p class="mb-0">&copy; <?php echo date('Y'); ?> GreenBasket. All rights reserved.</p>
-            </div>
-            <div class="col-md-6 text-end">
-                <p class="mb-0">Made with <i class="bi bi-heart-fill text-danger"></i> for a greener planet</p>
-            </div>
-        </div>
-    </div>
-</footer>
-
-<?php
-require_once 'includes/footer.php';
-?>
-
-<script>
-function addToCart(productId) {
-    <?php if (is_logged_in()): ?>
-        fetch('<?php echo SITE_URL; ?>/api/add_to_cart.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Sales Chart
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        const salesChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: <?php echo json_encode(array_column($monthly_sales, 'month')); ?>,
+                datasets: [{
+                    label: 'Sales (Rs)',
+                    data: <?php echo json_encode(array_column($monthly_sales, 'sales')); ?>,
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
             },
-            body: 'product_id=' + productId + '&quantity=1'
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Product added to cart!');
-                location.reload();
-            } else {
-                alert(data.message || 'Failed to add product to cart');
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
             }
-        })
-        .catch(error => {
-            alert('Error adding product to cart');
         });
-    <?php else: ?>
-        alert('Please login to add products to cart');
-        window.location.href = '<?php echo SITE_URL; ?>/login.php';
-    <?php endif; ?>
-}
-
-function toggleWishlist(productId) {
-    fetch('<?php echo SITE_URL; ?>/api/toggle_wishlist.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: 'product_id=' + productId
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert(data.message);
-            location.reload();
-        } else {
-            alert(data.message || 'Failed to update wishlist');
-        }
-    })
-    .catch(error => {
-        alert('Error updating wishlist');
-    });
-}
-</script>
+    </script>
+</body>
+</html>
