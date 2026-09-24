@@ -1,272 +1,190 @@
 <?php
 /**
- * Admin Orders Management
+ * Customer Orders Page
  */
 
 require_once '../includes/functions.php';
-require_once '../includes/admin_auth.php';
+require_once '../includes/auth.php';
 
-$page_title = 'Manage Orders';
+$page_title = 'My Orders';
+require_once '../includes/header.php';
 
-// Handle order status update
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_status') {
-    $order_id = intval($_POST['order_id'] ?? 0);
-    $order_status = sanitize_input($_POST['order_status'] ?? '');
+$user_id = $_SESSION['user_id'];
 
-    if ($order_id > 0 && in_array($order_status, ['pending', 'processing', 'shipped', 'delivered', 'cancelled'])) {
-        if ($order_status === 'delivered') {
-            $sql = "UPDATE orders SET order_status = ?, 
-                    payment_status = CASE WHEN payment_method = 'COD' THEN 'paid' ELSE payment_status END 
-                    WHERE order_id = ?";
-        } else {
-            $sql = "UPDATE orders SET order_status = ? WHERE order_id = ?";
-        }
-        prepared_execute($sql, "si", [$order_status, $order_id]);
-        set_flash_message('success', 'Order status updated successfully');
-    }
-    redirect(SITE_URL . '/admin/orders.php');
-}
+// Get all orders
+$sql = "SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC";
+$result = prepared_select($sql, "i", [$user_id]);
 
-// Get orders with pagination
-$page = intval($_GET['page'] ?? 1);
-$per_page = ADMIN_PRODUCTS_PER_PAGE;
-$offset = ($page - 1) * $per_page;
-
-$count_sql = "SELECT COUNT(*) as total FROM orders";
-$count_result = prepared_select($count_sql);
-$total_row = $count_result->fetch_assoc();
-$total_orders = $total_row['total'];
-$total_pages = ceil($total_orders / $per_page);
-
-$sql = "SELECT o.*, u.first_name, u.last_name FROM orders o LEFT JOIN users u ON o.user_id = u.user_id ORDER BY o.created_at DESC LIMIT ? OFFSET ?";
-$result = prepared_select($sql, "ii", [$per_page, $offset]);
 $orders = [];
 while ($row = $result->fetch_assoc()) {
     $orders[] = $row;
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $page_title; ?> - GreenBasket Admin</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link rel="stylesheet" href="<?php echo ASSETS_PATH; ?>/css/style.css">
-    <style>
-        .sidebar {
-            min-height: 100vh;
-            background: #1a1a1a;
-            color: white;
-        }
-        .sidebar .nav-link {
-            color: #cccccc !important;
-            padding: 15px 20px;
-            border-left: 4px solid transparent;
-        }
-        .sidebar .nav-link i {
-            color: #cccccc !important;
-        }
-        .sidebar .nav-link:hover,
-        .sidebar .nav-link.active {
-            background: #28a745 !important;
-            color: #ffffff !important;
-            border-left: 4px solid #ffffff;
-            font-weight: 600;
-        }
-        .sidebar .nav-link:hover i,
-        .sidebar .nav-link.active i {
-            color: #ffffff !important;
-        }
-    </style>
-</head>
-<body>
-    <div class="container-fluid">
+
+<!-- Page Header -->
+<section class="bg-success text-white py-4">
+    <div class="container">
         <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-2 sidebar p-0">
-                <div class="p-3 text-center border-bottom border-secondary">
-                    <i class="bi bi-basket-fill" style="font-size: 30px; color: #28a745;"></i>
-                    <h5 class="mt-2">GreenBasket</h5>
-                    <small>Admin Panel</small>
-                </div>
-                <nav class="nav flex-column mt-3">
-                    <a class="nav-link" href="index.php">
-                        <i class="bi bi-speedometer2 me-2"></i> Dashboard
-                    </a>
-                    <a class="nav-link" href="products.php">
-                        <i class="bi bi-box-seam me-2"></i> Products
-                    </a>
-                    <a class="nav-link" href="categories.php">
-                        <i class="bi bi-tags me-2"></i> Categories
-                    </a>
-                    <a class="nav-link active" href="orders.php">
-                        <i class="bi bi-bag me-2"></i> Orders
-                    </a>
-                    <a class="nav-link" href="customers.php">
-                        <i class="bi bi-people me-2"></i> Customers
-                    </a>
-                    <a class="nav-link" href="reviews.php">
-                        <i class="bi bi-star me-2"></i> Reviews
-                    </a>
-                    <a class="nav-link" href="coupons.php">
-                        <i class="bi bi-ticket-perforated me-2"></i> Coupons
-                    </a>
-                    <a class="nav-link" href="reports.php">
-                        <i class="bi bi-graph-up me-2"></i> Reports
-                    </a>
-                    <hr class="border-secondary">
-                    <a class="nav-link" href="../index.php" target="_blank">
-                        <i class="bi bi-eye me-2"></i> View Site
-                    </a>
-                    <a class="nav-link text-danger" href="../logout.php">
-                        <i class="bi bi-box-arrow-right me-2"></i> Logout
-                    </a>
-                </nav>
-            </div>
-            
-            <!-- Main Content -->
-            <div class="col-md-10 p-4">
-                <?php
-                $flash = get_flash_message();
-                if ($flash):
-                ?>
-                    <div class="alert alert-<?php echo $flash['type']; ?> alert-dismissible fade show" role="alert">
-                        <?php echo htmlspecialchars($flash['message']); ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                <?php endif; ?>
-                
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2>Manage Orders</h2>
-                </div>
-                
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Order #</th>
-                                        <th>Customer</th>
-                                        <th>Date</th>
-                                        <th>Total</th>
-                                        <th>Status</th>
-                                        <th>Payment</th>
-                                        <th>Transaction ID</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($orders as $order): ?>
-                                        <?php
-                                        $status_colors = [
-                                            'pending' => 'warning',
-                                            'processing' => 'info',
-                                            'shipped' => 'primary',
-                                            'delivered' => 'success',
-                                            'cancelled' => 'danger'
-                                        ];
-                                        $status_color = $status_colors[$order['order_status']] ?? 'secondary';
-                                        ?>
-                                        <tr>
-                                            <td><strong><?php echo htmlspecialchars($order['order_number']); ?></strong></td>
-                                            <td><?php echo htmlspecialchars($order['first_name'] . ' ' . $order['last_name']); ?></td>
-                                            <td><?php echo format_date($order['created_at']); ?></td>
-                                            <td><?php echo format_price($order['final_amount']); ?></td>
-                                            <td>
-                                                <span class="badge bg-<?php echo $status_color; ?>">
-                                                    <?php echo ucfirst($order['order_status']); ?>
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <span class="badge <?php echo $order['payment_status'] == 'paid' ? 'bg-success' : 'bg-warning'; ?>">
-                                                    <?php echo ucfirst($order['payment_status']); ?>
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <small class="text-muted">
-                                                    <?php echo !empty($order['transaction_id']) ? htmlspecialchars($order['transaction_id']) : '-'; ?>
-                                                </small>
-                                            </td>
-                                            <td>
-                                                <div class="dropdown">
-                                                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
-                                                        <i class="bi bi-three-dots"></i>
-                                                    </button>
-                                                    <ul class="dropdown-menu">
-                                                        <li><a class="dropdown-item" href="#" onclick="updateStatus(<?php echo $order['order_id']; ?>, 'pending')">Pending</a></li>
-                                                        <li><a class="dropdown-item" href="#" onclick="updateStatus(<?php echo $order['order_id']; ?>, 'processing')">Processing</a></li>
-                                                        <li><a class="dropdown-item" href="#" onclick="updateStatus(<?php echo $order['order_id']; ?>, 'shipped')">Shipped</a></li>
-                                                        <li><a class="dropdown-item" href="#" onclick="updateStatus(<?php echo $order['order_id']; ?>, 'delivered')">Delivered</a></li>
-                                                        <li><hr class="dropdown-divider"></li>
-                                                        <li><a class="dropdown-item text-danger" href="#" onclick="updateStatus(<?php echo $order['order_id']; ?>, 'cancelled')">Cancel</a></li>
-                                                    </ul>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                        <!-- Pagination -->
-                        <?php if ($total_pages > 1): ?>
-                            <nav class="mt-4">
-                                <ul class="pagination justify-content-center">
-                                    <?php if ($page > 1): ?>
-                                        <li class="page-item">
-                                            <a class="page-link" href="?page=<?php echo $page - 1; ?>">Previous</a>
-                                        </li>
-                                    <?php endif; ?>
-                                    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                                        <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
-                                            <a class="page-link" href="?page=<?php echo $i; ?>"><?php echo $i; ?></a>
-                                        </li>
-                                    <?php endfor; ?>
-                                    <?php if ($page < $total_pages): ?>
-                                        <li class="page-item">
-                                            <a class="page-link" href="?page=<?php echo $page + 1; ?>">Next</a>
-                                        </li>
-                                    <?php endif; ?>
-                                </ul>
-                            </nav>
-                        <?php endif; ?>
-                    </div>
-                </div>
+            <div class="col-12">
+                <h1 class="fw-bold">My Orders</h1>
+                <p class="mb-0"><?php echo count($orders); ?> order(s)</p>
             </div>
         </div>
     </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function updateStatus(orderId, status) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '';
+</section>
+
+<!-- Orders Content -->
+<section class="py-5">
+    <div class="container">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-lg-3 mb-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 100px; height: 100px; font-size: 40px;">
+                            <i class="bi bi-person"></i>
+                        </div>
+                        <h5><?php echo htmlspecialchars($_SESSION['first_name'] . ' ' . $_SESSION['last_name']); ?></h5>
+                        <p class="text-muted mb-3"><?php echo htmlspecialchars($_SESSION['email']); ?></p>
+                        <div class="alert alert-success">
+                            <i class="bi bi-currency-rupee me-1"></i>
+                            <strong><?php echo $_SESSION['eco_points']; ?></strong> Eco Points
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card border-0 shadow-sm mt-4">
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush">
+                            <a href="<?php echo SITE_URL; ?>/user/index.php" class="list-group-item list-group-item-action">
+                                <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                            </a>
+                            <a href="<?php echo SITE_URL; ?>/user/profile.php" class="list-group-item list-group-item-action">
+                                <i class="bi bi-person-gear me-2"></i> Profile
+                            </a>
+                            <a href="<?php echo SITE_URL; ?>/user/orders.php" class="list-group-item list-group-item-action active">
+                                <i class="bi bi-bag me-2"></i> My Orders
+                            </a>
+                            <a href="<?php echo SITE_URL; ?>/user/wishlist.php" class="list-group-item list-group-item-action">
+                                <i class="bi bi-heart me-2"></i> Wishlist
+                            </a>
+                            <a href="<?php echo SITE_URL; ?>/cart.php" class="list-group-item list-group-item-action">
+                                <i class="bi bi-cart3 me-2"></i> Cart
+                            </a>
+                            <hr>
+                            <a href="<?php echo SITE_URL; ?>/logout.php" class="list-group-item list-group-item-action text-danger">
+                                <i class="bi bi-box-arrow-right me-2"></i> Logout
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
             
-            const actionInput = document.createElement('input');
-            actionInput.type = 'hidden';
-            actionInput.name = 'action';
-            actionInput.value = 'update_status';
-            
-            const orderIdInput = document.createElement('input');
-            orderIdInput.type = 'hidden';
-            orderIdInput.name = 'order_id';
-            orderIdInput.value = orderId;
-            
-            const statusInput = document.createElement('input');
-            statusInput.type = 'hidden';
-            statusInput.name = 'order_status';
-            statusInput.value = status;
-            
-            form.appendChild(actionInput);
-            form.appendChild(orderIdInput);
-            form.appendChild(statusInput);
-            document.body.appendChild(form);
-            form.submit();
-        }
-    </script>
-</body>
-</html>
+            <!-- Main Content -->
+            <div class="col-lg-9">
+                <?php if (empty($orders)): ?>
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body text-center py-5">
+                            <i class="bi bi-bag-x" style="font-size: 80px; color: #ccc;"></i>
+                            <h3 class="mt-4">No orders yet</h3>
+                            <p class="text-muted">You haven't placed any orders yet.</p>
+                            <a href="<?php echo SITE_URL; ?>/shop.php" class="btn btn-success btn-lg">Start Shopping</a>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <?php foreach ($orders as $order): ?>
+                        <?php
+                        $status_colors = [
+                            'pending' => 'warning',
+                            'processing' => 'info',
+                            'shipped' => 'primary',
+                            'delivered' => 'success',
+                            'cancelled' => 'danger'
+                        ];
+                        $status_color = $status_colors[$order['order_status']] ?? 'secondary';
+                        
+                        // Get order items
+                        $items_sql = "SELECT * FROM order_items WHERE order_id = ?";
+                        $items_result = prepared_select($items_sql, "i", [$order['order_id']]);
+                        $order_items = [];
+                        while ($item_row = $items_result->fetch_assoc()) {
+                            $order_items[] = $item_row;
+                        }
+                        ?>
+                        <div class="card border-0 shadow-sm mb-4">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h5 class="mb-1">Order #<?php echo htmlspecialchars($order['order_number']); ?></h5>
+                                        <small class="text-muted"><?php echo format_date($order['created_at'], 'd M Y, g:i A'); ?></small>
+                                    </div>
+                                    <span class="badge bg-<?php echo $status_color; ?> fs-6">
+                                        <?php echo ucfirst($order['order_status']); ?>
+                                    </span>
+                                </div>
+                                
+                                <div class="row mb-3">
+                                    <?php foreach (array_slice($order_items, 0, 3) as $item): ?>
+                                        <div class="col-md-4 mb-2">
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-light rounded me-2 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                                    <i class="bi bi-box-seam" style="font-size: 25px; color: #ccc;"></i>
+                                                </div>
+                                                <div>
+                                                    <small class="fw-bold"><?php echo htmlspecialchars($item['product_name']); ?></small>
+                                                    <br>
+                                                    <small class="text-muted">Qty: <?php echo $item['quantity']; ?></small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                    <?php if (count($order_items) > 3): ?>
+                                        <div class="col-md-4 mb-2">
+                                            <small class="text-muted">+<?php echo count($order_items) - 3; ?> more items</small>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <span class="fw-bold">Total: <?php echo format_price($order['final_amount']); ?></span>
+                                        <?php if ($order['eco_points_earned'] > 0): ?>
+                                            <small class="text-success ms-2">+<?php echo $order['eco_points_earned']; ?> pts</small>
+                                        <?php endif; ?>
+                                    </div>
+                                    <a href="<?php echo SITE_URL; ?>/user/order-details.php?id=<?php echo $order['order_id']; ?>" 
+                                       class="btn btn-sm btn-outline-success">View Details</a>
+                                </div>
+                                
+                                <div class="mt-3 pt-3 border-top">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <small class="text-muted">Payment Method:</small>
+                                            <div class="fw-bold"><?php echo htmlspecialchars($order['payment_method']); ?></div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <small class="text-muted">Payment Status:</small>
+                                            <div>
+                                                <span class="badge <?php echo $order['payment_status'] == 'paid' ? 'bg-success' : 'bg-warning'; ?>">
+                                                    <?php echo ucfirst($order['payment_status']); ?>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <?php if (!empty($order['transaction_id'])): ?>
+                                        <div class="mt-2">
+                                            <small class="text-muted">Transaction ID:</small>
+                                            <div class="small text-muted"><?php echo htmlspecialchars($order['transaction_id']); ?></div>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</section>
+
+<?php require_once '../includes/footer.php'; ?>

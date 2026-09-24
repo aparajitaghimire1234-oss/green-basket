@@ -1,213 +1,109 @@
 <?php
 /**
- * Admin Dashboard
+ * Customer Dashboard
  */
 
 require_once '../includes/functions.php';
-require_once '../includes/admin_auth.php';
+require_once '../includes/auth.php';
 
-$page_title = 'Admin Dashboard';
+$page_title = 'My Dashboard';
+require_once '../includes/header.php';
+
+$user_id = $_SESSION['user_id'];
+$user = get_user($user_id);
+
+// Get order statistics
+$order_stats_sql = "SELECT 
+                    COUNT(*) as total_orders,
+                    SUM(CASE WHEN order_status = 'pending' THEN 1 ELSE 0 END) as pending_orders,
+                    SUM(CASE WHEN order_status = 'delivered' THEN 1 ELSE 0 END) as delivered_orders,
+                    SUM(final_amount) as total_spent
+                    FROM orders WHERE user_id = ?";
+$order_stats_result = prepared_select($order_stats_sql, "i", [$user_id]);
+$order_stats = $order_stats_result->fetch_assoc();
+
+// Get recent orders
+$recent_orders_sql = "SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 5";
+$recent_orders_result = prepared_select($recent_orders_sql, "i", [$user_id]);
+$recent_orders = [];
+while ($row = $recent_orders_result->fetch_assoc()) {
+    $recent_orders[] = $row;
+}
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $page_title; ?> - GreenBasket Admin</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?php echo ASSETS_PATH; ?>/css/style.css">
-    <style>
-        .sidebar {
-            min-height: 100vh;
-            background: #1a1a1a;
-            color: white;
-        }
-        .sidebar .nav-link {
-            color: #cccccc !important;
-            padding: 15px 20px;
-            border-left: 4px solid transparent;
-        }
-        .sidebar .nav-link i {
-            color: #cccccc !important;
-        }
-        .sidebar .nav-link:hover,
-        .sidebar .nav-link.active {
-            background: #28a745 !important;
-            color: #ffffff !important;
-            border-left: 4px solid #ffffff;
-            font-weight: 600;
-        }
-        .sidebar .nav-link:hover i,
-        .sidebar .nav-link.active i {
-            color: #ffffff !important;
-        }
-        .stat-card {
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        .stat-card .icon {
-            width: 60px;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container-fluid">
+<!-- Page Header -->
+<section class="bg-success text-white py-4">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="fw-bold">My Dashboard</h1>
+                <p class="mb-0">Welcome back, <?php echo htmlspecialchars($user['first_name']); ?>!</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Dashboard Content -->
+<section class="py-5">
+    <div class="container">
         <div class="row">
             <!-- Sidebar -->
-            <div class="col-md-2 sidebar p-0">
-                <div class="p-3 text-center border-bottom border-secondary">
-                    <i class="bi bi-basket-fill" style="font-size: 30px; color: #28a745;"></i>
-                    <h5 class="mt-2">GreenBasket</h5>
-                    <small>Admin Panel</small>
+            <div class="col-lg-3 mb-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 100px; height: 100px; font-size: 40px;">
+                            <i class="bi bi-person"></i>
+                        </div>
+                        <h5><?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?></h5>
+                        <p class="text-muted mb-3"><?php echo htmlspecialchars($user['email']); ?></p>
+                        <div class="alert alert-success">
+                            <i class="bi bi-currency-rupee me-1"></i>
+                            <strong><?php echo $user['eco_points']; ?></strong> Eco Points
+                        </div>
+                    </div>
                 </div>
-                <nav class="nav flex-column mt-3">
-                    <a class="nav-link active" href="index.php">
-                        <i class="bi bi-speedometer2 me-2"></i> Dashboard
-                    </a>
-                    <a class="nav-link" href="products.php">
-                        <i class="bi bi-box-seam me-2"></i> Products
-                    </a>
-                    <a class="nav-link" href="categories.php">
-                        <i class="bi bi-tags me-2"></i> Categories
-                    </a>
-                    <a class="nav-link" href="orders.php">
-                        <i class="bi bi-bag me-2"></i> Orders
-                    </a>
-                    <a class="nav-link" href="customers.php">
-                        <i class="bi bi-people me-2"></i> Customers
-                    </a>
-                    <a class="nav-link" href="reviews.php">
-                        <i class="bi bi-star me-2"></i> Reviews
-                    </a>
-                    <a class="nav-link" href="coupons.php">
-                        <i class="bi bi-ticket-perforated me-2"></i> Coupons
-                    </a>
-                    <a class="nav-link" href="reports.php">
-                        <i class="bi bi-graph-up me-2"></i> Reports
-                    </a>
-                    <hr class="border-secondary">
-                    <a class="nav-link" href="../index.php" target="_blank">
-                        <i class="bi bi-eye me-2"></i> View Site
-                    </a>
-                    <a class="nav-link text-danger" href="../logout.php">
-                        <i class="bi bi-box-arrow-right me-2"></i> Logout
-                    </a>
-                </nav>
+                
+                <div class="card border-0 shadow-sm mt-4">
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush">
+                            <a href="<?php echo SITE_URL; ?>/user/index.php" class="list-group-item list-group-item-action active">
+                                <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                            </a>
+                            <a href="<?php echo SITE_URL; ?>/user/profile.php" class="list-group-item list-group-item-action">
+                                <i class="bi bi-person-gear me-2"></i> Profile
+                            </a>
+                            <a href="<?php echo SITE_URL; ?>/user/orders.php" class="list-group-item list-group-item-action">
+                                <i class="bi bi-bag me-2"></i> My Orders
+                            </a>
+                            <a href="<?php echo SITE_URL; ?>/user/wishlist.php" class="list-group-item list-group-item-action">
+                                <i class="bi bi-heart me-2"></i> Wishlist
+                            </a>
+                            <a href="<?php echo SITE_URL; ?>/cart.php" class="list-group-item list-group-item-action">
+                                <i class="bi bi-cart3 me-2"></i> Cart
+                            </a>
+                            <hr>
+                            <a href="<?php echo SITE_URL; ?>/logout.php" class="list-group-item list-group-item-action text-danger">
+                                <i class="bi bi-box-arrow-right me-2"></i> Logout
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <!-- Main Content -->
-            <div class="col-md-10 p-4">
-                <?php
-                $flash = get_flash_message();
-                if ($flash):
-                ?>
-                    <div class="alert alert-<?php echo $flash['type']; ?> alert-dismissible fade show" role="alert">
-                        <?php echo htmlspecialchars($flash['message']); ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                <?php endif; ?>
-                
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2>Dashboard</h2>
-                    <div>
-                        <span class="text-muted">Welcome, <?php echo htmlspecialchars($_SESSION['admin_full_name']); ?></span>
-                    </div>
-                </div>
-                
-                <?php
-                // Get dashboard statistics
-                $stats_sql = "SELECT 
-                            (SELECT COUNT(*) FROM users) as total_users,
-                            (SELECT COUNT(*) FROM products) as total_products,
-                            (SELECT COUNT(*) FROM orders) as total_orders,
-                            (SELECT COUNT(*) FROM orders WHERE order_status = 'pending') as pending_orders,
-                            (SELECT COUNT(*) FROM orders WHERE order_status = 'delivered') as delivered_orders,
-                            (SELECT SUM(final_amount) FROM orders WHERE order_status = 'delivered') as total_revenue,
-                            (SELECT COUNT(*) FROM products WHERE stock_quantity < 10) as low_stock";
-                $stats_result = prepared_select($stats_sql);
-                $stats = $stats_result->fetch_assoc();
-                
-                // Get monthly sales
-                $monthly_sales_sql = "SELECT DATE_FORMAT(created_at, '%Y-%m') as month, SUM(final_amount) as sales 
-                                      FROM orders 
-                                      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
-                                      GROUP BY DATE_FORMAT(created_at, '%Y-%m')
-                                      ORDER BY month ASC";
-                $monthly_sales_result = prepared_select($monthly_sales_sql);
-                $monthly_sales = [];
-                while ($row = $monthly_sales_result->fetch_assoc()) {
-                    $monthly_sales[] = $row;
-                }
-                
-                // Get recent orders
-                $recent_orders_sql = "SELECT * FROM orders ORDER BY created_at DESC LIMIT 5";
-                $recent_orders_result = prepared_select($recent_orders_sql);
-                $recent_orders = [];
-                while ($row = $recent_orders_result->fetch_assoc()) {
-                    $recent_orders[] = $row;
-                }
-                
-                // Get low stock products
-                $low_stock_sql = "SELECT * FROM products WHERE stock_quantity < 10 ORDER BY stock_quantity ASC LIMIT 5";
-                $low_stock_result = prepared_select($low_stock_sql);
-                $low_stock = [];
-                while ($row = $low_stock_result->fetch_assoc()) {
-                    $low_stock[] = $row;
-                }
-                ?>
-                
+            <div class="col-lg-9">
                 <!-- Stats Cards -->
                 <div class="row mb-4">
                     <div class="col-md-3 mb-3">
-                        <div class="card stat-card border-0 shadow-sm">
+                        <div class="card border-0 shadow-sm">
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
-                                    <div class="icon bg-primary text-white rounded-circle me-3">
-                                        <i class="bi bi-people"></i>
-                                    </div>
-                                    <div>
-                                        <h6 class="mb-0">Total Users</h6>
-                                        <h3 class="mb-0"><?php echo $stats['total_users'] ?? 0; ?></h3>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-3 mb-3">
-                        <div class="card stat-card border-0 shadow-sm">
-                            <div class="card-body">
-                                <div class="d-flex align-items-center">
-                                    <div class="icon bg-success text-white rounded-circle me-3">
-                                        <i class="bi bi-box-seam"></i>
-                                    </div>
-                                    <div>
-                                        <h6 class="mb-0">Total Products</h6>
-                                        <h3 class="mb-0"><?php echo $stats['total_products'] ?? 0; ?></h3>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-3 mb-3">
-                        <div class="card stat-card border-0 shadow-sm">
-                            <div class="card-body">
-                                <div class="d-flex align-items-center">
-                                    <div class="icon bg-info text-white rounded-circle me-3">
+                                    <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
                                         <i class="bi bi-bag"></i>
                                     </div>
                                     <div>
                                         <h6 class="mb-0">Total Orders</h6>
-                                        <h3 class="mb-0"><?php echo $stats['total_orders'] ?? 0; ?></h3>
+                                        <h4 class="mb-0"><?php echo $order_stats['total_orders'] ?? 0; ?></h4>
                                     </div>
                                 </div>
                             </div>
@@ -215,66 +111,47 @@ $page_title = 'Admin Dashboard';
                     </div>
                     
                     <div class="col-md-3 mb-3">
-                        <div class="card stat-card border-0 shadow-sm">
-                            <div class="card-body">
-                                <div class="d-flex align-items-center">
-                                    <div class="icon bg-warning text-white rounded-circle me-3">
-                                        <i class="bi bi-currency-rupee"></i>
-                                    </div>
-                                    <div>
-                                        <h6 class="mb-0">Revenue</h6>
-                                        <h3 class="mb-0"><?php echo format_price($stats['total_revenue'] ?? 0); ?></h3>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Secondary Stats -->
-                <div class="row mb-4">
-                    <div class="col-md-4 mb-3">
                         <div class="card border-0 shadow-sm">
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
-                                    <div class="bg-warning text-white rounded p-3 me-3">
+                                    <div class="bg-warning text-white rounded-circle d-inline-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
                                         <i class="bi bi-clock"></i>
                                     </div>
                                     <div>
-                                        <h6 class="mb-0">Pending Orders</h6>
-                                        <h4 class="mb-0"><?php echo $stats['pending_orders'] ?? 0; ?></h4>
+                                        <h6 class="mb-0">Pending</h6>
+                                        <h4 class="mb-0"><?php echo $order_stats['pending_orders'] ?? 0; ?></h4>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-3 mb-3">
                         <div class="card border-0 shadow-sm">
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
-                                    <div class="bg-success text-white rounded p-3 me-3">
+                                    <div class="bg-info text-white rounded-circle d-inline-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
                                         <i class="bi bi-check-circle"></i>
                                     </div>
                                     <div>
-                                        <h6 class="mb-0">Delivered Orders</h6>
-                                        <h4 class="mb-0"><?php echo $stats['delivered_orders'] ?? 0; ?></h4>
+                                        <h6 class="mb-0">Delivered</h6>
+                                        <h4 class="mb-0"><?php echo $order_stats['delivered_orders'] ?? 0; ?></h4>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-3 mb-3">
                         <div class="card border-0 shadow-sm">
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
-                                    <div class="bg-danger text-white rounded p-3 me-3">
-                                        <i class="bi bi-exclamation-triangle"></i>
+                                    <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                                        <i class="bi bi-currency-rupee"></i>
                                     </div>
                                     <div>
-                                        <h6 class="mb-0">Low Stock Products</h6>
-                                        <h4 class="mb-0"><?php echo $stats['low_stock'] ?? 0; ?></h4>
+                                        <h6 class="mb-0">Total Spent</h6>
+                                        <h4 class="mb-0"><?php echo format_price($order_stats['total_spent'] ?? 0); ?></h4>
                                     </div>
                                 </div>
                             </div>
@@ -282,30 +159,39 @@ $page_title = 'Admin Dashboard';
                     </div>
                 </div>
                 
-                <div class="row">
-                    <!-- Recent Orders -->
-                    <div class="col-md-6 mb-4">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h5 class="mb-0">Recent Orders</h5>
-                                    <a href="orders.php" class="btn btn-sm btn-outline-success">View All</a>
-                                </div>
-                                
-                                <?php if (empty($recent_orders)): ?>
-                                    <p class="text-muted">No orders yet</p>
-                                <?php else: ?>
-                                    <div class="table-responsive">
-                                        <table class="table table-sm">
-                                            <thead>
-                                                <tr>
-                                                    <th>Order #</th>
-                                                    <th>Amount</th>
-                                                    <th>Status</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php foreach ($recent_orders as $order): ?>
+                <!-- Recent Orders -->
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="mb-0">Recent Orders</h5>
+                            <a href="<?php echo SITE_URL; ?>/user/orders.php" class="btn btn-sm btn-outline-success">View All</a>
+                        </div>
+                        
+                        <?php if (empty($recent_orders)): ?>
+                            <div class="text-center py-4">
+                                <i class="bi bi-bag-x" style="font-size: 60px; color: #ccc;"></i>
+                                <p class="text-muted mt-3">No orders yet</p>
+                                <a href="<?php echo SITE_URL; ?>/shop.php" class="btn btn-success">Start Shopping</a>
+                            </div>
+                        <?php else: ?>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Order #</th>
+                                            <th>Date</th>
+                                            <th>Total</th>
+                                            <th>Status</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($recent_orders as $order): ?>
+                                            <tr>
+                                                <td><?php echo htmlspecialchars($order['order_number']); ?></td>
+                                                <td><?php echo format_date($order['created_at']); ?></td>
+                                                <td><?php echo format_price($order['final_amount']); ?></td>
+                                                <td>
                                                     <?php
                                                     $status_colors = [
                                                         'pending' => 'warning',
@@ -316,105 +202,58 @@ $page_title = 'Admin Dashboard';
                                                     ];
                                                     $status_color = $status_colors[$order['order_status']] ?? 'secondary';
                                                     ?>
-                                                    <tr>
-                                                        <td><?php echo htmlspecialchars($order['order_number']); ?></td>
-                                                        <td><?php echo format_price($order['final_amount']); ?></td>
-                                                        <td>
-                                                            <span class="badge bg-<?php echo $status_color; ?>">
-                                                                <?php echo ucfirst($order['order_status']); ?>
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                <?php endif; ?>
+                                                    <span class="badge bg-<?php echo $status_color; ?>">
+                                                        <?php echo ucfirst($order['order_status']); ?>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <a href="<?php echo SITE_URL; ?>/user/order-details.php?id=<?php echo $order['order_id']; ?>" 
+                                                       class="btn btn-sm btn-outline-secondary">View</a>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
                             </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Low Stock Alerts -->
-                    <div class="col-md-6 mb-4">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h5 class="mb-0">Low Stock Alerts</h5>
-                                    <a href="products.php" class="btn btn-sm btn-outline-success">View All</a>
-                                </div>
-                                
-                                <?php if (empty($low_stock)): ?>
-                                    <p class="text-muted">All products are well stocked</p>
-                                <?php else: ?>
-                                    <div class="table-responsive">
-                                        <table class="table table-sm">
-                                            <thead>
-                                                <tr>
-                                                    <th>Product</th>
-                                                    <th>Stock</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php foreach ($low_stock as $product): ?>
-                                                    <tr>
-                                                        <td><?php echo htmlspecialchars($product['product_name']); ?></td>
-                                                        <td>
-                                                            <span class="badge bg-danger"><?php echo $product['stock_quantity']; ?></span>
-                                                        </td>
-                                                    </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 
-                <!-- Monthly Sales Chart -->
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body">
-                        <h5 class="mb-4">Monthly Sales (Last 6 Months)</h5>
-                        <canvas id="salesChart" height="100"></canvas>
+                <!-- Quick Actions -->
+                <div class="row mt-4">
+                    <div class="col-md-4 mb-3">
+                        <a href="<?php echo SITE_URL; ?>/shop.php" class="card border-0 shadow-sm text-decoration-none">
+                            <div class="card-body text-center">
+                                <i class="bi bi-cart-plus" style="font-size: 40px; color: var(--primary-green);"></i>
+                                <h6 class="mt-3">Shop Now</h6>
+                                <p class="small text-muted">Browse our eco-friendly products</p>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <a href="<?php echo SITE_URL; ?>/user/wishlist.php" class="card border-0 shadow-sm text-decoration-none">
+                            <div class="card-body text-center">
+                                <i class="bi bi-heart" style="font-size: 40px; color: var(--primary-green);"></i>
+                                <h6 class="mt-3">Wishlist</h6>
+                                <p class="small text-muted">View your saved products</p>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <a href="<?php echo SITE_URL; ?>/eco-tips.php" class="card border-0 shadow-sm text-decoration-none">
+                            <div class="card-body text-center">
+                                <i class="bi bi-lightbulb" style="font-size: 40px; color: var(--primary-green);"></i>
+                                <h6 class="mt-3">Eco Tips</h6>
+                                <p class="small text-muted">Learn sustainable living tips</p>
+                            </div>
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</section>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        // Sales Chart
-        const ctx = document.getElementById('salesChart').getContext('2d');
-        const salesChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: <?php echo json_encode(array_column($monthly_sales, 'month')); ?>,
-                datasets: [{
-                    label: 'Sales (Rs)',
-                    data: <?php echo json_encode(array_column($monthly_sales, 'sales')); ?>,
-                    borderColor: '#28a745',
-                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                    fill: true,
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-    </script>
-</body>
-</html>
+<?php require_once '../includes/footer.php'; ?>
